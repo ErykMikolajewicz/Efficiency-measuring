@@ -1,5 +1,6 @@
 import time
 import os
+import sqlite3
 
 import numpy as np
 from tqdm import tqdm
@@ -13,6 +14,8 @@ def returning_input(input_text: str) -> str:
         print('''Incorrect answer wite "yes" or "no" in console, and click enter''')
 
 
+
+
 def function_timer(iteration=300, loops=30):
     def function_catcher(function):
         def measure_time(*args, **kwargs):
@@ -23,42 +26,67 @@ def function_timer(iteration=300, loops=30):
                     result = function(*args, **kwargs)
                 t2 = time.time()
                 time_list[i] = (t2-t1)
-            average = np.average(time_list)
+            median = np.median(time_list)
             minimum = np.min(time_list)
             maximum = np.max(time_list)
             standard_deviation = np.std(time_list)
             report_text = []
-            report_text.append(f"Result: {result} s")
-            report_text.append(f"Average time of computing for {iteration} iterations: {average} s")
+            report_text.append(f"Result: {result}")
+            report_text.append(f"Median time of computing for {iteration} iterations: {median} s")
             report_text.append(f"Minimal time value: {minimum} s")
             report_text.append(f"Maximum time value: {maximum} s")
             report_text.append(f"Standard deviation: {standard_deviation} s")
             print()  # free line after tqdm bar
             [print(text) for text in report_text]
-            path = f"Efficiency test/{function.__name__}"
-            previous_report_exist = os.path.exists(path)
-            if previous_report_exist:
+
+            connection = sqlite3.connect("reports.db")
+            cursor = connection.cursor()
+            reports_exists = cursor.execute(f"""SELECT name
+                                            FROM sqlite_schema
+                                            WHERE type='table' AND name='{function.__module__}';""").fetchone()
+
+            if reports_exists:
                 print("\nExist previous reports for than function.")
-                display = input("Display last report? 'yes' or 'no': ")
+                display = returning_input("Display last report? 'yes' or 'no': ")
                 if display == "yes":
                     print()  # a free line, for better reading
-                    with open(path, "r") as report:
-                        last_report_line = report.readlines()[-len(report_text):]
-                        [print(line, end="") for line in last_report_line]
+                    last_reports = cursor.execute(f"""Select *
+                                                   FROM {function.__module__}
+                                                   WHERE function_name='{function.__name__}'
+                                                   ORDER BY measuring_date
+                                                   LIMIT 15;
+                                                   """)
+                    for report in last_reports:
+                        print(report)
             else:
                 print("\nNo previous report for this function.")
             save = returning_input("Do you want to save this report? 'yes' or 'no': ")
             if save == "yes":
-                if previous_report_exist:
-                    pass
-                else:
-                    dir_exist = os.path.exists("Efficiency test")
-                    if dir_exist:
-                        pass
-                    else:
-                        os.mkdir("Efficiency test")
-                    os.mknod(path)
-                with open(path, "a") as report:
-                    [report.writelines(line + '\n') for line in report_text]
+                if not reports_exists:
+                    cursor.execute(f"""CREATE TABLE {function.__module__}
+                                    (function_name text,
+                                    result real,
+                                    median real,
+                                    standard_deviation real,
+                                    maximum_value real,
+                                    minimum_value real,
+                                    measuring_date date,
+                                    iteration int,
+                                    loops int
+                                    );""")
+                values_to_save = (function.__name__, result, median, standard_deviation, maximum, minimum, time.time(),
+                                  iteration, loops)
+                cursor.execute(f"""INSERT INTO {function.__module__}
+                               VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);
+                               """, values_to_save)
+                connection.commit()
         return measure_time
     return function_catcher
+
+
+if __name__ == "__main__":
+    @function_timer()
+    def test_function():
+        return 1
+
+    test_function()
