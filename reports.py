@@ -14,5 +14,6 @@ class Report:
     min_: float
     std: float
     measurement_date: datetime
+    time_series: str
 
 

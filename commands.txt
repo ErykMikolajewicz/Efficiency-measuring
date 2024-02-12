@@ -1,0 +1,15 @@
+# Commands I used during test, to ensure resembling execution times
+
+# Count number of running processes
+sudo ps -e | wc -l
+# Around 300 in GUI mode, and 260 in text mode
+# Switching to text mode don't change a lot
+
+# Command ensure only one cpu core will be used
+taskset -c 0 pdm run src/measurement.py  --option
+# Best results, but still very various execution times
+
+# Plan something on real time fifo, with high priority
+sudo chrt -f 99 /home/eryk/.local/bin/pdm run src/measurement.py  --cpu 1
+# Disappointing result, use only 95% of core, and frequently interrupt process execution,
+# results still very floating

@@ -18,7 +18,7 @@ def print_report(report: Report):
     Number of loops: {report.n_loops}
     Mean: {report.mean} s
     Median: {report.median} s
-    Minimal time value: {report.max_} s
-    Maximum time value: {report.min_} s
+    Minimal time value: {report.min_} s
+    Maximum time value: {report.max_} s
     Standard deviation: {report.std} s
     """)
